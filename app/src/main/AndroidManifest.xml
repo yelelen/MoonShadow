@@ -16,7 +16,13 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name=".activity.MainAty"/>
+        <activity android:name=".activity.MainAty"
+            android:configChanges="keyboardHidden|screenSize|orientation"/>
+        <activity android:name=".activity.VideoPlayerAty"
+            android:configChanges="keyboardHidden|screenSize|orientation"
+            android:screenOrientation="landscape"/>
     </application>
 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 </manifest>

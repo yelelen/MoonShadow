@@ -18,4 +18,5 @@ public class CloudVideoFragment extends BaseFragment {
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.from(getActivity()).inflate(R.layout.cloud_video, null);
     }
+
 }

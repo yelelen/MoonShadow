@@ -6,4 +6,6 @@
     <string name="cloud_video">网络视频</string>
     <string name="cloud_music">网络音乐</string>
     <string name="search">全网搜索</string>
+    <string name="lv_no_media">没有发现视频</string>
+    <string name="lv_video_name">我们在一起</string>
 </resources>

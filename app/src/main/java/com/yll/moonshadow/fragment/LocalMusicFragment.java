@@ -18,4 +18,5 @@ public class LocalMusicFragment extends BaseFragment {
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.from(getActivity()).inflate(R.layout.local_music, null);
     }
+
 }
