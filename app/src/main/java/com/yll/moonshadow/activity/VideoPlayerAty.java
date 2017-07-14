@@ -1,11 +1,15 @@
 package com.yll.moonshadow.activity;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.Nullable;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.ImageView;
@@ -16,12 +20,18 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 import com.yll.moonshadow.R;
+import com.yll.moonshadow.utils.Utils;
+
+import static com.yll.moonshadow.utils.Constants.START_VIDEO_PLAYER;
 
 /**
  * Created by yelelen on 7/14/2017.
  */
 
 public class VideoPlayerAty extends Activity implements View.OnClickListener{
+    private static final int UPDATE_VIDEO_PROGRESS = 0;
+    private String mVideoName;
+
     private VideoView mVideoView;
     private ImageView mVoice;
     private SeekBar mVoiceSeekBar;
@@ -39,6 +49,10 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
     private TextView mSystemTime;
 
     private boolean isControlSee = true;
+    private boolean isFullscreen = false;
+
+    RelativeLayout.LayoutParams mWrapContentParams = null;
+    private int mLastPlayedDuration = 0;
 
     private RelativeLayout mVideoPlayerControl;
 
@@ -52,51 +66,36 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         findViews();
         setListeners();
 
-        mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mp) {
-                mVideoView.start();
-            }
-        });
-        mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
-            @Override
-            public boolean onError(MediaPlayer mp, int what, int extra) {
-                Toast.makeText(VideoPlayerAty.this, "视频播放失败", Toast.LENGTH_SHORT).show();
-                return false;
-            }
-        });
-        mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
 
-            }
-        });
-
-        Uri uri = getIntent().getData();
+        Bundle bundle = getIntent().getBundleExtra("data");
+        mVideoName = bundle.getString("file_name");
+        mLastPlayedDuration = bundle.getInt("played_duration");
+        Uri uri = Uri.parse(bundle.getString("uri"));
         if (uri != null){
 //            Log.d("URI", uri.toString());
             mVideoView.setVideoURI(uri);
-
         }
 //设置系统自带的控制器
 //        mVideoView.setMediaController(new MediaController(this));
-
-
-        mVideoView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                    if (isControlSee){
-                        mVideoPlayerControl.setVisibility(View.INVISIBLE);
-                        isControlSee = false;
-                    } else {
-                        mVideoPlayerControl.setVisibility(View.VISIBLE);
-                        isControlSee = true;
-                    }
-                }
-        });
-
     }
 
+    private Handler mHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(Message msg) {
+            switch (msg.what){
+                case UPDATE_VIDEO_PROGRESS:
+                    int currentPos = mVideoView.getCurrentPosition();
+                    mVideoSeekBar.setProgress(currentPos);
+                    mPlayed.setText(Utils.formatDuration(currentPos));
+                    mHandler.removeMessages(msg.what);
+                    mHandler.sendEmptyMessageDelayed(UPDATE_VIDEO_PROGRESS, 1000);
+                    break;
+                default:
+                    break;
+            }
+            return true;
+        }
+    });
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
@@ -128,6 +127,78 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         mBattery.setOnClickListener(this);
         mSystemTime.setOnClickListener(this);
 
+        mVideoSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser){
+                    mVideoSeekBar.setProgress(progress);
+                    mVideoView.seekTo(progress);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
+        mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+
+                int duration = mVideoView.getDuration();
+                mVideoSeekBar.setMax(duration);
+
+                mDuration.setText(Utils.formatDuration(duration));
+                mPlayed.setText(Utils.formatDuration(0));
+
+                mTitle.setText(mVideoName);
+
+                mVideoView.seekTo(mLastPlayedDuration);
+                mVideoView.start();
+                if (mLastPlayedDuration > 0) {
+                    Toast.makeText(VideoPlayerAty.this, "从上次记录播放", Toast.LENGTH_SHORT).show();
+
+                }
+
+                mHandler.sendEmptyMessage(UPDATE_VIDEO_PROGRESS);
+            }
+        });
+        mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer mp, int what, int extra) {
+                Toast.makeText(VideoPlayerAty.this, "视频播放失败", Toast.LENGTH_SHORT).show();
+                return false;
+            }
+        });
+        mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mPlay.setImageResource(R.mipmap.play);
+            }
+        });
+
+        mVideoView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()){
+                    case MotionEvent.ACTION_DOWN:
+                       mVideoPlayerControl.setVisibility((isControlSee ? View.INVISIBLE : View.VISIBLE));
+                        isControlSee =  !isControlSee;
+                        break;
+                }
+                return true;
+            }
+        });
+
+
+
+
     }
 
     private void findViews(){
@@ -149,11 +220,18 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         mVideoPlayerControl = (RelativeLayout)findViewById(R.id.video_player_control);
 
         mVideoView = (VideoView)findViewById(R.id.video_view);
+        mWrapContentParams = (RelativeLayout.LayoutParams) mVideoView.getLayoutParams();
+
 
     }
 
     @Override
     public void onClick(View v) {
+        int pos;
+        RelativeLayout.LayoutParams params;
+        Intent intent;
+
+
         switch (v.getId()){
             case R.id.voice_voice:
 
@@ -171,10 +249,22 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 
                 break;
             case R.id.video_return:
+                intent = new Intent();
+                intent.putExtra("played_duration", mVideoView.getCurrentPosition());
+                setResult(START_VIDEO_PLAYER, intent);
                 finish();
 
                 break;
             case R.id.video_back:
+//                后退键，每次后退15秒
+                pos = mVideoView.getCurrentPosition() - 15000;
+                pos = (pos >= 0)? pos: 0;
+                mVideoSeekBar.setProgress(pos);
+                mVideoView.seekTo(pos);
+                mVideoView.start();
+
+                mPlay.setImageResource(R.mipmap.stop);
+
 
                 break;
              case R.id.video_play:
@@ -186,13 +276,28 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
                      mPlay.setImageResource(R.mipmap.stop);
                  }
 
-
                 break;
              case R.id.video_forward:
+                 pos = mVideoView.getCurrentPosition() + 15000;
+                 pos = (pos <= mVideoView.getDuration())? pos : mVideoView.getDuration();
+                 mVideoSeekBar.setProgress(pos);
+                 mVideoView.seekTo(pos);
+                 mVideoView.start();
 
-                break;
+                 mPlay.setImageResource(R.mipmap.stop);
+
+                 break;
              case R.id.video_fullscreen:
 
+//                 如果不保存上次的LayoutParams,而直接采取如下办法会有bug
+//                 params = (!isFullscreen) ? RelativeLayout.LayoutParams.MATCH_PARENT : RelativeLayout.LayoutParams.WRAP_CONTENT;
+//                 mVideoView.setLayoutParams(new RelativeLayout.LayoutParams(params, params));
+//                 isFullscreen = !isFullscreen;
+
+                 params = (isFullscreen) ? mWrapContentParams :
+                         new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
+                 mVideoView.setLayoutParams(params);
+                 isFullscreen = !isFullscreen;
                 break;
             case R.id.video_title:
 

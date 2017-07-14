@@ -25,12 +25,15 @@ import com.yll.moonshadow.beans.VideoItem;
 
 import java.util.ArrayList;
 
+import static com.yll.moonshadow.utils.Constants.MSG_TAG;
+import static com.yll.moonshadow.utils.Constants.START_VIDEO_PLAYER;
+
 /**
  * Created by yelelen on 7/13/2017.
  */
 
 public class LocalVideoFragment extends BaseFragment {
-    private static final int MSG_TAG = 0x11;
+
 
 
     private ListView mVideoListView;
@@ -39,6 +42,7 @@ public class LocalVideoFragment extends BaseFragment {
 
     private ArrayList<VideoItem> mVideoItems;
     private ContentResolver mResolver;
+    private int mPlayedDuration = 0;
 
     private Handler mHandler = new Handler(new Handler.Callback() {
         @Override
@@ -89,12 +93,32 @@ public class LocalVideoFragment extends BaseFragment {
 //                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
 //                startActivity(intent);
                 Intent intent = new Intent(getContext(), VideoPlayerAty.class);
-                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
-                startActivity(intent);
+//                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
+                Bundle bundle = new Bundle();
+                bundle.putString("uri", mVideoItems.get(position).getPath());
+                bundle.putString("file_name", mVideoItems.get(position).getName());
+                bundle.putInt("played_duration", mPlayedDuration);
+                intent.putExtra("data", bundle);
+                startActivityForResult(intent, START_VIDEO_PLAYER);
             }
         });
 
         return v;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        switch(resultCode) {
+            case START_VIDEO_PLAYER:
+                if (resultCode == START_VIDEO_PLAYER)
+                    mPlayedDuration = data.getIntExtra("played_duration", 0);
+                break;
+            default:
+                break;
+        }
+
     }
 
     private void getDataFromLocal(){
