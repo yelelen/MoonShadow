@@ -6,12 +6,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.util.DisplayMetrics;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -20,11 +23,11 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.VideoView;
 
 import com.yll.moonshadow.R;
 import com.yll.moonshadow.beans.VideoItem;
 import com.yll.moonshadow.utils.Utils;
+import com.yll.moonshadow.view.VideoView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,6 +39,7 @@ import java.util.Date;
 
 public class VideoPlayerAty extends Activity implements View.OnClickListener{
     private static final int UPDATE_VIDEO_PROGRESS = 0;
+    private static final int HIDE_VIDEO_PLAYER_CONTROL = 1;
 
     private VideoView mVideoView;
     private ImageView mVoice;
@@ -55,18 +59,31 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
     private ImageView mBattery;
     private TextView mSystemTime;
 
-    private boolean isControlSee = true;
-    private boolean isFullscreen = true;
+    private RelativeLayout mVideoPlayerControl;
+    private boolean isControlSee;   // 视频控制器是否可见
+    private boolean isFullscreen = true;    // 是否处于全屏状态
 
     private RelativeLayout.LayoutParams mVideoViewFirstParams = null;
-    private int mLastPlayedDuration = 0;
+    private int mLastPlayedDuration = 0;        // 记录上次已经播放该视频的时长
     private SharedPreferences mSharedPreferences;
-    private ArrayList<VideoItem> mVideoList;
-    private int mSelectedVideo;
 
+    private ArrayList<VideoItem> mVideoList;    //    传进来的视频列表
+    private int mSelectedVideo;     //  用户在视频列表中点击的视频位置
 
-    private RelativeLayout mVideoPlayerControl;
-    private PowerReceiver mPowerReceiver;
+    private PowerReceiver mPowerReceiver;   // 监听电源变化的广播的接收器
+
+    private GestureDetector mGestureDetector; // 手势识别器
+
+    private AudioManager mAudioManager; // 声音服务
+    private int mVolume; // 当前的音量
+    boolean isVoiceAdd = true;
+
+    // 屏幕宽和高
+    private int mScreenWidth;
+    private int mScreenHeight;
+//    视频大小
+    private int mVideoWidth;
+    private int mVideoHeight;
 
     private Handler mHandler = new Handler(new Handler.Callback() {
         @Override
@@ -81,12 +98,15 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
                     mHandler.removeMessages(msg.what);
                     mHandler.sendEmptyMessageDelayed(UPDATE_VIDEO_PROGRESS, 1000);
                     break;
+                case HIDE_VIDEO_PLAYER_CONTROL:
+                    mVideoPlayerControl.setVisibility(View.INVISIBLE);
                 default:
                     break;
             }
             return true;
         }
     });
+
 
 
     private String getSystemTime() {
@@ -104,8 +124,14 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         findViews();
 
         setListeners();
+
         registerPowerListener();
 
+        initData();
+
+    }
+
+    private void initData() {
         Bundle bundle = getIntent().getBundleExtra("video_data");
         mVideoList = bundle.getParcelableArrayList("video_list");
         mSelectedVideo = bundle.getInt("position");
@@ -114,6 +140,51 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         mVideoViewFirstParams = (RelativeLayout.LayoutParams) mVideoView.getLayoutParams();
         mVideoView.setVideoPath(mVideoList.get(mSelectedVideo).getPath());
 
+
+        // 获得屏幕的宽和高
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        mScreenWidth = displayMetrics.widthPixels;
+        mScreenHeight = displayMetrics.heightPixels;
+
+        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maxVolume = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        mVoiceSeekBar.setMax(maxVolume);
+        setVoiceIconAndSeekBar();
+
+        mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener(){
+            @Override
+            public void onLongPress(MotionEvent e) {
+                super.onLongPress(e);
+            }
+
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                setFullscreenAndDefault();
+                return super.onDoubleTap(e);
+            }
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+//                mVideoPlayerControl.setVisibility((isControlSee ? View.INVISIBLE : View.VISIBLE));
+//                isControlSee =  !isControlSee;
+//                if (isControlSee) {
+//                    mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 5000);
+//                }
+
+                mVideoPlayerControl.setVisibility((isControlSee ? View.INVISIBLE : View.VISIBLE));
+                isControlSee = !isControlSee;
+                if (isControlSee) {
+                    mVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                    setVoiceIconAndSeekBar();
+                    mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 5000);
+                } else {
+                    mHandler.removeMessages(HIDE_VIDEO_PLAYER_CONTROL);
+                }
+                return super.onSingleTapConfirmed(e);
+            }
+        });
     }
 
     private void registerPowerListener() {
@@ -163,9 +234,30 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 
     @Override
     public void onClick(View v) {
+        mHandler.removeMessages(HIDE_VIDEO_PLAYER_CONTROL);
 
         switch (v.getId()){
             case R.id.voice_voice:
+                if (mVolume < 15 && isVoiceAdd) {
+                    mVolume += 5;
+                    if (mVolume >= 15) {
+                        mVolume = 15;
+                        isVoiceAdd = false;
+                    }
+                } else if (mVolume < 15 && !isVoiceAdd) {
+                    mVolume -= 5;
+                    if (mVolume <= 0) {
+                        mVolume = 0;
+                        isVoiceAdd = true;
+                    }
+                } else if (mVolume == 15) {
+                    mVolume -= 5;
+                    isVoiceAdd = false;
+                }
+
+                setVoiceIconAndSeekBar();
+                setVolume();
+
 
                 break;
             case R.id.voice_progress:
@@ -210,7 +302,7 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 //                 mVideoView.setLayoutParams(new RelativeLayout.LayoutParams(params, params));
 //                 isFullscreen = !isFullscreen;
 
-                fullscreen();
+                setFullscreenAndDefault();
                 break;
             case R.id.video_title:
 
@@ -224,8 +316,18 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
             default:
 
                 break;
-
         }
+
+       mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 5000);
+    }
+
+    private void setVoiceIconAndSeekBar() {
+        setVoiceIcon();
+        mVoiceSeekBar.setProgress(mVolume);
+    }
+
+    private void setVolume() {
+        mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, mVolume, AudioManager.FLAG_PLAY_SOUND);
     }
 
     private void readLastPlayedDuration() {
@@ -241,12 +343,33 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
     }
 
 
-    private void fullscreen() {
-        RelativeLayout.LayoutParams params;
-        params = (!isFullscreen) ? mVideoViewFirstParams :
-                new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-        mVideoView.setLayoutParams(params);
-        isFullscreen = !isFullscreen;
+    private void setFullscreenAndDefault() {
+//        RelativeLayout.LayoutParams params;
+//        params = (!isFullscreen) ? mVideoViewFirstParams :
+//                new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+//        mVideoView.setLayoutParams(params);
+//        isFullscreen = !isFullscreen;
+
+        int width = mScreenWidth;
+        int height = mScreenHeight;
+
+        if (isFullscreen) {
+//            恢复到默认的状态
+            // for compatibility, we adjust size based on aspect ratio
+            if ( mVideoWidth * height  < width * mVideoHeight ) {
+                //Log.i("@@@", "image too wide, correcting");
+                width = height * mVideoWidth / mVideoHeight;
+            } else if ( mVideoWidth * height  > width * mVideoHeight ) {
+                //Log.i("@@@", "image too tall, correcting");
+                height = width * mVideoHeight / mVideoWidth;
+            }
+            isFullscreen = false;
+        } else {
+//            切换到全屏状态
+           isFullscreen = true;
+        }
+        mVideoView.setVideoSize(width, height);
+
     }
 
     private void play() {
@@ -323,12 +446,33 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
+                mHandler.removeMessages(HIDE_VIDEO_PLAYER_CONTROL);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 5000);
+            }
+        });
 
+        mVoiceSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser){
+                    mVolume = progress;
+                    setVolume();
+                    setVoiceIconAndSeekBar();
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                mHandler.removeMessages(HIDE_VIDEO_PLAYER_CONTROL);
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 5000);
             }
         });
 
@@ -344,14 +488,23 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 
                 mTitle.setText(mVideoList.get(mSelectedVideo).getName());
                 mVideoView.setLayoutParams(mVideoViewFirstParams);
+                mVideoPlayerControl.setVisibility(View.INVISIBLE);
+                isControlSee = false;
 
-                readLastPlayedDuration();
-                mVideoView.seekTo(mLastPlayedDuration);
-                mVideoView.start();
+                mPlay.setImageResource(R.mipmap.stop);
+
                 if (mLastPlayedDuration > 0) {
                     Toast.makeText(VideoPlayerAty.this, "从上次记录播放", Toast.LENGTH_SHORT).show();
 
                 }
+//              获得视频的原始大小
+                mVideoWidth = mp.getVideoWidth();
+                mVideoHeight = mp.getVideoHeight();
+
+                readLastPlayedDuration();
+                mVideoView.setVideoSize(mScreenWidth, mScreenHeight);
+                mVideoView.seekTo(mLastPlayedDuration);
+                mVideoView.start();
 
                 mHandler.sendEmptyMessage(UPDATE_VIDEO_PROGRESS);
             }
@@ -366,28 +519,47 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
         mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
             public void onCompletion(MediaPlayer mp) {
-                mPlay.setImageResource(R.mipmap.play);
                 mSelectedVideo = (++mSelectedVideo) % mVideoList.size();
                 mVideoView.setVideoPath(mVideoList.get(mSelectedVideo).getPath());
             }
         });
 
-        mVideoView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()){
-                    case MotionEvent.ACTION_DOWN:
-                       mVideoPlayerControl.setVisibility((isControlSee ? View.INVISIBLE : View.VISIBLE));
-                        isControlSee =  !isControlSee;
-                        break;
-                }
-                return true;
-            }
-        });
+//        mVideoView.setOnTouchListener(new View.OnTouchListener() {
+//            @Override
+//            public boolean onTouch(View v, MotionEvent event) {
+//                switch (event.getAction()) {
+//                    case MotionEvent.ACTION_DOWN:
+//                        mVideoPlayerControl.setVisibility((isControlSee ? View.INVISIBLE : View.VISIBLE));
+//                        isControlSee = !isControlSee;
+//                        if (isControlSee) {
+//                            mHandler.sendEmptyMessageDelayed(HIDE_VIDEO_PLAYER_CONTROL, 3500);
+//                        } else {
+//                            mHandler.removeMessages(HIDE_VIDEO_PLAYER_CONTROL);
+//                        }
+//                        break;
+//                }
+//                return true;
+//            }
+//        });
 
 
 
 
+    }
+
+    private void setVoiceIcon() {
+        int icon = R.mipmap.voice_mute_normal;
+
+        if (mVolume == 0)
+            icon = R.mipmap.voice_mute_normal;
+        else if (mVolume <= 5)
+            icon = R.mipmap.voice1_normal;
+        else if (mVolume <= 10)
+            icon = R.mipmap.voice2_normal;
+        else if (mVolume <= 15)
+            icon = R.mipmap.voice3_normal;
+
+        mVoice.setImageResource(icon);
     }
 
     private void findViews(){
@@ -412,6 +584,12 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener{
 
         mVideoView = (VideoView)findViewById(R.id.video_view);
 
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        mGestureDetector.onTouchEvent(event);   // 把手势传递给手势识别器
+        return super.onTouchEvent(event);
     }
 
     class PowerReceiver extends BroadcastReceiver{
