@@ -42,7 +42,6 @@ public class LocalVideoFragment extends BaseFragment {
 
     private ArrayList<VideoItem> mVideoItems;
     private ContentResolver mResolver;
-    private int mPlayedDuration = 0;
 
     private Handler mHandler = new Handler(new Handler.Callback() {
         @Override
@@ -95,30 +94,14 @@ public class LocalVideoFragment extends BaseFragment {
                 Intent intent = new Intent(getContext(), VideoPlayerAty.class);
 //                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
                 Bundle bundle = new Bundle();
-                bundle.putString("uri", mVideoItems.get(position).getPath());
-                bundle.putString("file_name", mVideoItems.get(position).getName());
-                bundle.putInt("played_duration", mPlayedDuration);
-                intent.putExtra("data", bundle);
+                bundle.putInt("position", position);
+                bundle.putParcelableArrayList("video_list", mVideoItems);
+                intent.putExtra("video_data", bundle);
                 startActivityForResult(intent, START_VIDEO_PLAYER);
             }
         });
 
         return v;
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        switch(resultCode) {
-            case START_VIDEO_PLAYER:
-                if (resultCode == START_VIDEO_PLAYER)
-                    mPlayedDuration = data.getIntExtra("played_duration", 0);
-                break;
-            default:
-                break;
-        }
-
     }
 
     private void getDataFromLocal(){
