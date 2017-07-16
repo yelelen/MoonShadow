@@ -2,6 +2,7 @@ package com.yll.moonshadow.utils;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 
 /**
@@ -39,4 +40,16 @@ public class Utils {
 
         return builder.toString();
     }
+
+    public static boolean isWebUri(Uri uri){
+        if (uri != null) {
+            String path = uri.toString().toLowerCase();
+            if (path.startsWith("http") || path.startsWith("rtsp") || path.startsWith("mms")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 }
