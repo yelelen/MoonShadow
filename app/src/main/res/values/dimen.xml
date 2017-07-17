@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <dimen name="iv_splash">120dp</dimen>
-    <dimen name="pb_splash">30dp</dimen>
-    <dimen name="txt_splash">30dp</dimen>
-
-    <dimen name="rb_main">50dp</dimen>
-</resources>
