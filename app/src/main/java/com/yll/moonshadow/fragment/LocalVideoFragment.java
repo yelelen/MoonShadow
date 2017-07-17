@@ -26,13 +26,12 @@ import com.yll.moonshadow.beans.VideoItem;
 import java.util.ArrayList;
 
 import static com.yll.moonshadow.utils.Constants.MSG_TAG;
-import static com.yll.moonshadow.utils.Constants.START_VIDEO_PLAYER;
 
 /**
  * Created by yelelen on 7/13/2017.
  */
 
-public class LocalVideoFragment extends BaseFragment {
+public class LocalVideoFragment extends BaseFragment{
 
 
 
@@ -91,13 +90,14 @@ public class LocalVideoFragment extends BaseFragment {
 //                Intent intent = new Intent();
 //                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
 //                startActivity(intent);
-                Intent intent = new Intent(getContext(), VideoPlayerAty.class);
 //                intent.setDataAndType(Uri.parse(mVideoItems.get(position).getPath()), "video/*");
+                Intent intent = new Intent(getContext(), VideoPlayerAty.class);
+
                 Bundle bundle = new Bundle();
                 bundle.putInt("position", position);
                 bundle.putParcelableArrayList("video_list", mVideoItems);
                 intent.putExtra("video_data", bundle);
-                startActivityForResult(intent, START_VIDEO_PLAYER);
+                startActivity(intent);
             }
         });
 

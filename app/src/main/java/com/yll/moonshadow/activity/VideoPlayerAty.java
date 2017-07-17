@@ -176,6 +176,8 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener {
         isWebUri = Utils.isWebUri(mUri);
 
         if (mUri != null) {      // 视频来自网络或者从外部传进来
+            mLastUriPlayedDuration = getIntent().getIntExtra("played_position", 0);
+
             mVideoView.setVideoURI(mUri);
 
             // 隐藏播放下一个和上一个按键
@@ -329,13 +331,16 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener {
 
                 break;
             case R.id.voice_switch:
+                Toast.makeText(this, "切换到VVPlayer", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(this, VVPlayerAty.class);
+                if (mUri == null) {
+                    mUri = Uri.parse(mVideoList.get(mSelectedVideo).getPath());
+                }
+                intent.setData(mUri);
+                intent.putExtra("played_position", mVideoView.getCurrentPosition());
+                startActivity(intent);
 
-                break;
-            case R.id.video_played:
-
-                break;
-            case R.id.video_progress:
-
+                finish();
                 break;
             case R.id.video_return:
                 saveLastPlayedDuration();
@@ -366,17 +371,7 @@ public class VideoPlayerAty extends Activity implements View.OnClickListener {
 //                 params = (!isFullscreen) ? RelativeLayout.LayoutParams.MATCH_PARENT : RelativeLayout.LayoutParams.WRAP_CONTENT;
 //                 mVideoView.setLayoutParams(new RelativeLayout.LayoutParams(params, params));
 //                 isFullscreen = !isFullscreen;
-
                 setFullscreenAndDefault();
-                break;
-            case R.id.video_title:
-
-                break;
-            case R.id.battery:
-
-                break;
-            case R.id.system_time:
-
                 break;
             default:
 

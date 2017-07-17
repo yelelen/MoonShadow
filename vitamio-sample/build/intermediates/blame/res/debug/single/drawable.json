@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "E:\\ASProjects\\MoonShadow\\vitamio-sample\\build\\intermediates\\res\\merged\\debug\\drawable\\mediacontroller_button.xml",
+        "source": "E:\\ASProjects\\MoonShadow\\vitamio\\build\\intermediates\\bundles\\default\\res\\drawable\\mediacontroller_button.xml"
+    },
+    {
+        "merged": "E:\\ASProjects\\MoonShadow\\vitamio-sample\\build\\intermediates\\res\\merged\\debug\\drawable\\scrubber_progress_horizontal_holo_dark.xml",
+        "source": "E:\\ASProjects\\MoonShadow\\vitamio\\build\\intermediates\\bundles\\default\\res\\drawable\\scrubber_progress_horizontal_holo_dark.xml"
+    },
+    {
+        "merged": "E:\\ASProjects\\MoonShadow\\vitamio-sample\\build\\intermediates\\res\\merged\\debug\\drawable\\scrubber_control_selector_holo.xml",
+        "source": "E:\\ASProjects\\MoonShadow\\vitamio\\build\\intermediates\\bundles\\default\\res\\drawable\\scrubber_control_selector_holo.xml"
+    }
+]

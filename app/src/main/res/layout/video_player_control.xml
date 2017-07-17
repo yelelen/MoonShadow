@@ -53,10 +53,12 @@
             <SeekBar
                 android:id="@+id/voice_progress"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:maxHeight="3dp"
+                android:minHeight="3dp"
                 android:progress="0"
-                android:progressTint="@color/progress_bar"/>
+                android:progressDrawable="@drawable/seekbar"/>
 
             <ImageView
                 android:layout_width="wrap_content"
@@ -65,7 +67,6 @@
                 android:padding="5dp"
                 android:id="@+id/voice_switch"
                 android:clickable="true"/>
-
 
 
         </LinearLayout>
@@ -80,7 +81,6 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="3dp"
             android:layout_marginBottom="10dp"
             android:gravity="center_vertical">
             <TextView
@@ -93,12 +93,13 @@
                 android:textColor="#77ffffff"/>
             <SeekBar
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="30dp"
                 android:layout_weight="1"
                 android:progress="0"
-                android:progressTint="@color/progress_bar"
+                android:maxHeight="3dp"
+                android:minHeight="3dp"
                 android:id="@+id/video_progress"
-                android:secondaryProgressTint="@android:color/holo_green_dark"/>
+                android:progressDrawable="@drawable/seekbar"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
